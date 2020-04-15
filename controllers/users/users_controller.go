@@ -9,11 +9,18 @@ import (
 	"strconv"
 )
 
-func GetUser(c *gin.Context) {
-	userId, userErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
+func GetUserId(userIdParam string) (int64, *errors.RestError) {
+	userId, userErr := strconv.ParseInt(userIdParam, 10, 64)
 	if userErr != nil {
-		err := errors.NewBadRequestError("invalid user id")
-		c.JSON(err.Status, err)
+		return 0, errors.NewBadRequestError("invalid user id")
+	}
+	return userId, nil
+}
+
+func Get(c *gin.Context) {
+	userId, idErr := GetUserId(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
 		return
 	}
 	user, getErr := services.GetUser(userId)
@@ -23,7 +30,7 @@ func GetUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, user)
 }
-func CreateUser(c *gin.Context) {
+func Create(c *gin.Context) {
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		restErr := errors.NewBadRequestError("Invalid json body")
@@ -37,6 +44,43 @@ func CreateUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, result)
 }
+
+func Update(c *gin.Context) {
+	userId, idErr := GetUserId(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
+		return
+	}
+	var user users.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		restErr := errors.NewBadRequestError("Invalid json body")
+		c.JSON(restErr.Status, restErr)
+		return
+	}
+	user.Id = userId
+	isPartial := c.Request.Method == http.MethodPatch
+
+	result, err := services.UpdateUser(isPartial, user)
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+func Delete(c *gin.Context) {
+	userId, idErr := GetUserId(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
+		return
+	}
+	result, err := services.DeleteUser(userId)
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 func SearchUser(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "implement me")
 }
