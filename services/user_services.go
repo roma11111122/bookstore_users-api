@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/roma11111122/bookstore_users-api/domain/users"
+	"github.com/roma11111122/bookstore_users-api/utils/date_utils"
 	"github.com/roma11111122/bookstore_users-api/utils/errors"
 )
 
@@ -17,6 +18,8 @@ func CreateUser(user users.User) (*users.User, *errors.RestError) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
+	user.DateCreated = date_utils.GetNowDBFormat()
+	user.Status = users.StatusActive
 	if err := user.Save(); err != nil {
 		return nil, err
 	}
@@ -56,4 +59,9 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestError
 func DeleteUser(userId int64) *errors.RestError {
 	user := &users.User{Id: userId}
 	return user.Delete()
+}
+
+func Search(status string) ([]users.User, *errors.RestError) {
+	dao := &users.User{}
+	return dao.FindByStatus(status)
 }
